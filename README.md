@@ -1,7 +1,8 @@
 # K8
 This project demonstrates deploying a simple containerized "Hello World" website to AWS using Elastic Kubernetes Service (EKS). It covers the complete workflow from container creation, repository management, networking, cluster provisioning, to exposing the application via an internet-facing Network Load Balancer.
 
-   ![Project3](https://github.com/user-attachments/assets/bf30e8c5-9c9e-4ac3-a56e-c1e9fdeed0b8)
+ ![Project3v2](https://github.com/user-attachments/assets/336928d8-6673-4f60-8995-f60649c96267)
+
 
 Key Objectives:
 
