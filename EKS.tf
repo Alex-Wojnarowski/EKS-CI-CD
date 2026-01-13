@@ -2,16 +2,16 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.0"
 
-  name               = "project3-cluster"
+  name               = "project2-cluster"
   kubernetes_version = "1.33"
 
   addons = {
-    coredns                = {}
+    coredns = {}
     eks-pod-identity-agent = {
       before_compute = true
     }
-    kube-proxy             = {}
-    vpc-cni                = {
+    kube-proxy = {}
+    vpc-cni = {
       before_compute = true
     }
   }
@@ -36,6 +36,6 @@ module "eks" {
   }
 
   tags = {
-    Terraform   = "True"
+    Terraform = "True"
   }
 }
