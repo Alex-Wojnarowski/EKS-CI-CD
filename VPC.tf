@@ -24,6 +24,8 @@ module "vpc" {
   }
 
   tags = {
-    Terraform = "True"
+    Project     = "Project2"
+    Environment = "dev"
+    ManagedBy   = "Terraform"
   }
 }
