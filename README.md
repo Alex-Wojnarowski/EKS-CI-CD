@@ -1,125 +1,102 @@
-# K8
-This project demonstrates deploying a simple containerized "Hello World" website to AWS using Elastic Kubernetes Service (EKS). It covers the complete workflow from container creation, repository management, networking, cluster provisioning, to exposing the application via an internet-facing Network Load Balancer.
+EKS CI/CD Pipeline with Terraform & GitHub Actions
 
- ![Project3v2](https://github.com/user-attachments/assets/336928d8-6673-4f60-8995-f60649c96267)
+Overview
 
+This project demonstrates a production-style CI/CD workflow for deploying a containerized application to Amazon EKS, with infrastructure provisioned using Terraform and deployments controlled through GitHub Actions using OIDC authentication.
 
-Key Objectives:
+The focus of this project is not just deployment, but operability, security, and controlled releases.
 
-1. Build and containerize a simple Nginx-based website with a custom index.html.
+________________________________________
+Architecture Overview
+Infrastructure layer (Terraform):
+-	VPC with public and private subnets
+-	Amazon EKS cluster with managed node groups
+-	IAM roles and permissions required for cluster and CI/CD access
+  
+Application layer (Kubernetes):
+-	Kubernetes Deployment running an Nginx-based application
+-	Kubernetes Service of type LoadBalancer (AWS NLB)
+-	Resource requests & limits
+-	Readiness and liveness probes
+  
+CI/CD layer (GitHub Actions):
+-	Automated image build & push to Amazon ECR
+-	Manual approval gate for production deployment
+-	Secure AWS authentication using OIDC (no static credentials)
+  
+________________________________________
+CI/CD Flow
+Continuous Integration (CI)
+Triggered on every push to main:
+1.	Checkout source code
+2.	Authenticate to AWS using GitHub OIDC
+3.	Build Docker image
+4.	Push image to Amazon ECR with immutable SHA tag
+   
+CI runs automatically and does not require approval.
+________________________________________
+Continuous Deployment (CD)
+Triggered after successful CI:
+1.	Requires manual approval via GitHub Environments
+2.	Assumes AWS role using OIDC
+3.	Updates Kubernetes Deployment image
+4.	Verifies rollout status
+   
+This approach ensures controlled production releases while keeping CI fully automated.
+________________________________________
+Security Considerations
+-	No AWS access keys stored in GitHub
+-	GitHub Actions authenticates via OIDC
+-	IAM role trust restricted to this repository
+-	Kubernetes RBAC handled via aws-auth mapping
+-	Immutable image tags prevent accidental rollbacks
+  
+________________________________________
+Kubernetes Configuration Highlights
+-	Readiness & liveness probes ensure safe rollouts
+-	CPU & memory requests/limits enforce fair scheduling
+-	Rolling updates prevent downtime
+-	NLB provides external access without pod exposure
+  
+________________________________________
+Terraform Scope
+Terraform is responsible for:
+-	Networking (VPC, subnets)
+-	EKS cluster & node groups
+-	IAM roles and permissions
+  
+Terraform intentionally does not manage:
+-	Application deployments
+-	Kubernetes runtime configuration
+  
+This separation reflects real-world ownership boundaries.
+________________________________________
+How to Deploy
+1.	Push changes to main
+2.	CI builds and pushes image automatically
+3.	Approve deployment in GitHub Actions
+4.	Application rolls out to EKS
+   
+________________________________________
+Design Decisions
+-	OIDC over static credentials → improved security
+-	Manual production gate → controlled releases
+-	Immutable image tags → reproducibility
+-	Separation of infra & app lifecycle → clarity and safety
+  
+________________________________________
+Possible Extensions
+-	Add observability (Prometheus & Grafana)
+-	Introduce alerting rules
+-	Blue/Green or Canary deployments
+-	Cost monitoring dashboards
+  
+________________________________________
+ Tech Stack
+-	AWS (EKS, ECR, IAM, VPC)
+-	Terraform
+-	Kubernetes
+-	Docker
+-	GitHub Actions
+  
 
-2. Push the Docker image to Amazon ECR.
-
-3. Provision a custom VPC with public and private subnets using Terraform.
-
-4. Deploy an EKS cluster with managed node groups.
-
-5. Deploy the containerized website via a Kubernetes Deployment.
-
-6. Expose the application externally using a Kubernetes Service of type LoadBalancer (NLB).
-
-7. Ensure high availability by running multiple replicas across availability zones.
-
-Technical Steps:
-
-1. Build the Docker Image
-
- - Create an Nginx Docker image containing the index.html.
-
- - Test locally to verify functionality.
-
-2. Create an Amazon ECR Repository
-
- - Follow AWS ECR instructions to push the Docker image:
-
-    * Authenticate Docker with ECR.
-
-    * Tag the image.
-
-    * Push the image to the repository.
-
-3. Provision Networking with Terraform
-
- - Create a custom VPC (VPC.tf) with:
-
-    * Two public subnets for LoadBalancer access.
-
-    * Two private subnets for EKS worker nodes.
-
-    * NAT Gateway for private subnet internet access.
-
- - Configure subnet tags to integrate with EKS.
-
-4. Deploy EKS Cluster
-
- - Use Terraform terraform-aws-modules/eks/aws module (EKS.tf) to provision:
-
-    * Control plane in private subnets.
-
-    * Managed node groups in private subnets.
-
-    * Core AWS add-ons: VPC-CNI, CoreDNS, kube-proxy.
-
-    * Internet-accessible endpoint.
-
- - IAM roles for node groups are automatically managed.
-
-5. Configure Kubernetes Access
-
- - Retrieve kubeconfig for local kubectl access.
-
-6. Deploy Application
-
- - Apply deployment.yaml for the Nginx pods.
-
- - Apply service.yaml to expose the deployment via an NLB.
-
-7. Access Application
-
- - Retrieve the external NLB DNS from kubectl get svc and open it in a browser. 
-
-Biggest Problems Encountered:
-
-1. Certificate Authority Delay
-
- - Issue: Initially, the cluster creation seemed to hang, and the certificate authority took longer than expected to become available.
-
- - Solution: Patience. The cluster eventually became ready once AWS finished provisioning all control plane resources.
-
-2. Node Group Configuration Issues
-
- - Issue: The managed node group initially showed:
-
-    * No Auto Scaling Group name
-
-    * No Node IAM Role ARN
-
-    * Nodes stuck in CREATING
-
- - Solution: Tweaked the EKS.tf configuration:
-
-    * Ensured proper IAM role attachments for the nodes by ensuring correct addons usage.
-
-3. Pod Networking Failures
-
- - Issue: Pods were stuck in ContainerCreating due to CNI plugin.
-
- - Solution:
-
-    * Correcting addon configuration resulting in proper creation priority of resources.
-
-4. Load Balancer Type Not Updating
-
- - Issue: The Kubernetes Service initially provisioned a Classic Load Balancer instead of the desired NLB.
-
- - Solution:
-
-    * Updated service annotations to specify NLB.
-
-    * Re-applied the service YAML and waited for AWS to provision the NLB.
-
-5. General EKS Provisioning Delays
-
- - Observation: EKS cluster and node group provisioning can take significantly longer than other AWS infrastructure.
-
- - Takeaway: Plan for up to 15–20 minutes for full node readiness, especially when deploying private subnets or multiple availability zones.
